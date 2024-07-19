@@ -7,9 +7,7 @@ const messageRoutes = require('../backend/routes/message.routes');
 const userRoutes = require('../backend/routes/user.routes');
 
 const connectToMongoDB = require('./db/connectToMongoDB');
-
-
-const app = express()
+const { app, server } = require("../backend/socket/socket")
 const PORT = process.env.PORT || 5000
 
 app.use(express.json()) // parse the incoming requests with JSON payloads
@@ -22,7 +20,7 @@ app.use("/api/users", userRoutes)
 //     res.send('Server ready')
 // })
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     connectToMongoDB();
     console.log(`Server running on port ${PORT}`)
 })

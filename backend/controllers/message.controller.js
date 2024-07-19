@@ -1,5 +1,6 @@
 const Conversation = require("../models/conversation.model");
-const Message = require('../models/message.model')
+const Message = require('../models/message.model');
+const { getReceiverSocketId, io } = require("../socket/socket");
 const sendMessage = async (req, res) => {
     try {
         const { message } = req.body;
@@ -22,7 +23,6 @@ const sendMessage = async (req, res) => {
         if (newMessage) {
             conversation.messages.push(newMessage._id)
         }
-        //SOCKET IO functionality
 
         // await conversation.save()
         // await newMessage.save();
@@ -30,6 +30,15 @@ const sendMessage = async (req, res) => {
         //this will run in parallel
         await Promise.all([conversation.save(), newMessage.save()])
         res.status(201).json(newMessage);
+
+        //SOCKET IO functionality
+
+        const receiverSocketId = getReceiverSocketId(receiverId)
+        if (receiverSocketId) {
+            // io.to(<socket_id>).emit() used to save events to specific client
+            io.to(receiverSocketId).emit("newMessage", newMessage)
+        }
+
 
     } catch (error) {
         console.log("Error in sendMessage controller", error);
@@ -39,12 +48,15 @@ const sendMessage = async (req, res) => {
 
 const getMessages = async (req, res) => {
     try {
-        const { id: usetToChatId } = req.params;
+        const { id: userToChatId } = req.params;
         const senderId = req.user._id;
         const conversation = await Conversation.findOne({
-            participants: { $all: [senderId, usetToChatId] },
+            participants: { $all: [senderId, userToChatId] },
         }).populate("messages")
-        res.status(200).json(conversation.messages);
+
+        if (!conversation) return res.status(200).json([]);
+        const messages = conversation.messages;
+        res.status(200).json(messages)
 
     } catch (error) {
         console.log("Error in getMessages controller", error);
